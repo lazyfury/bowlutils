@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/smtp"
 	"time"
-
-	"github.com/lazyfury/bowlutils/ioc"
 )
 
 // Config Email 配置
@@ -197,29 +195,4 @@ func (m *Message) Validate() error {
 		return fmt.Errorf("body or HTML must be provided")
 	}
 	return nil
-}
-
-// 全局便捷函数
-
-// Send 使用默认发送器发送邮件（同步）
-func Send(ctx context.Context, msg *Message) error {
-	sender, ok := ioc.Get("emailSender")
-	if !ok {
-		return fmt.Errorf("emailSender not found in IOC container")
-	}
-
-	s, ok := sender.(Sender)
-	if !ok {
-		return fmt.Errorf("emailSender is not Sender")
-	}
-
-	return s.Send(ctx, msg)
-}
-
-// RegisterSender 注册 Email 发送器到 IOC
-func RegisterSender(config *Config) {
-	sender := NewSMTPSender(config)
-	ioc.Provide("emailSender", func() (any, error) {
-		return sender, nil
-	}, true)
 }

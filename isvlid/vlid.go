@@ -6,8 +6,25 @@ import (
 	"regexp"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/lazyfury/bowlutils/utils"
 )
+
+// isZero 检查值是否为零值
+func isZero(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+
+	// 如果是指针，需要判断指针是否为 nil 或指向的值是否为 zero
+	switch rv.Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Interface:
+		if rv.IsNil() {
+			return true
+		}
+	}
+
+	return reflect.ValueOf(v).IsZero()
+}
 
 type Condition func(target any, field any, fieldName string) error
 
@@ -75,7 +92,7 @@ func (v *Validator) Validate() error {
 
 func Required() Condition {
 	return func(target any, field any, fieldName string) error {
-		if utils.IsZero(field) {
+		if isZero(field) {
 			return fmt.Errorf("value is required")
 		}
 		return nil
@@ -138,7 +155,7 @@ func IsValidEmail(email string, allowEmpty bool) Condition {
 
 func Default[T any](defaultValue T) Condition {
 	return func(target any, field any, fieldName string) error {
-		if utils.IsZero(field) {
+		if isZero(field) {
 			rv := reflect.ValueOf(target).Elem()
 			fv := rv.FieldByName(fieldName)
 			if fv.IsValid() {

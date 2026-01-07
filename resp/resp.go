@@ -1,7 +1,8 @@
 package resp
 
 import (
-	"github.com/gin-gonic/gin"
+	"encoding/json"
+	"net/http"
 )
 
 var (
@@ -17,16 +18,8 @@ var (
 	RequirePhoneErrMsg  = "require phone"
 )
 
-type Page[T any] struct {
-	PageNum   int64 `json:"page_num"`
-	PageSize  int64 `json:"page_size"`
-	PageCount int64 `json:"page_count"`
-	Total     int64 `json:"total"`
-	Items     *[]T  `json:"items"`
-}
-
 type resp[T any] struct {
-	c      *gin.Context
+	w      http.ResponseWriter
 	status int
 	code   int
 	msg    string
@@ -59,8 +52,8 @@ func WithData[T any](d T) option[T] {
 	}
 }
 
-func New[T any](c *gin.Context, opts ...option[T]) *resp[T] {
-	r := &resp[T]{c: c, status: 200, code: SuccessCode, msg: SuccessMsg}
+func New[T any](w http.ResponseWriter, opts ...option[T]) *resp[T] {
+	r := &resp[T]{w: w, status: 200, code: SuccessCode, msg: SuccessMsg}
 	for _, opt := range opts {
 		if opt == nil {
 			continue
@@ -71,47 +64,49 @@ func New[T any](c *gin.Context, opts ...option[T]) *resp[T] {
 }
 
 func (b *resp[T]) Send() error {
-	b.c.JSON(b.status, gin.H{
+	b.w.Header().Set("Content-Type", "application/json")
+	b.w.WriteHeader(b.status)
+	err := json.NewEncoder(b.w).Encode(map[string]any{
 		"code": b.code,
 		"msg":  b.msg,
 		"data": b.data,
 	})
-	return nil
+	return err
 }
 
 // ===== shortcuts =============================
 
 // Ok 成功响应
-func Ok[T any](c *gin.Context, data T) error {
-	return New(c, WithData(data), WithMsg[T](SuccessMsg), WithCode[T](SuccessCode), WithStatus[T](200)).Send()
+func Ok[T any](w http.ResponseWriter, data T) error {
+	return New(w, WithData(data), WithMsg[T](SuccessMsg), WithCode[T](SuccessCode), WithStatus[T](200)).Send()
 }
 
 // Fail 失败响应
-func Fail[T any](c *gin.Context, msg string, opts ...option[T]) error {
+func Fail[T any](w http.ResponseWriter, msg string, opts ...option[T]) error {
 	opts = append([]option[T]{WithMsg[T](msg), WithCode[T](int(BusinessErrCode)), WithStatus[T](400)}, opts...)
-	return New(c, opts...).Send()
+	return New(w, opts...).Send()
 }
 
 // Error 错误响应
-func Error[T any](c *gin.Context, code int, err string, data T, opts ...option[T]) error {
+func Error[T any](w http.ResponseWriter, code int, err string, data T, opts ...option[T]) error {
 	opts = append([]option[T]{WithMsg[T](err), WithCode[T](int(code)), WithStatus[T](500), WithData(data)}, opts...)
-	return New(c, opts...).Send()
+	return New(w, opts...).Send()
 }
 
 // NotFound 404 响应
-func NotFound[T any](c *gin.Context, msg string, opts ...option[T]) error {
+func NotFound[T any](w http.ResponseWriter, msg string, opts ...option[T]) error {
 	opts = append([]option[T]{WithMsg[T](msg), WithCode[T](int(BusinessErrCode)), WithStatus[T](404)}, opts...)
-	return New(c, opts...).Send()
+	return New(w, opts...).Send()
 }
 
 // Unauthorized 401 响应
-func Unauthorized[T any](c *gin.Context, msg string, opts ...option[T]) error {
+func Unauthorized[T any](w http.ResponseWriter, msg string, opts ...option[T]) error {
 	opts = append([]option[T]{WithMsg[T](msg), WithCode[T](int(BusinessErrCode)), WithStatus[T](401)}, opts...)
-	return New(c, opts...).Send()
+	return New(w, opts...).Send()
 }
 
 // Forbidden 403 响应
-func Forbidden[T any](c *gin.Context, msg string, opts ...option[T]) error {
+func Forbidden[T any](w http.ResponseWriter, msg string, opts ...option[T]) error {
 	opts = append([]option[T]{WithMsg[T](msg), WithCode[T](int(BusinessErrCode)), WithStatus[T](403)}, opts...)
-	return New(c, opts...).Send()
+	return New(w, opts...).Send()
 }
