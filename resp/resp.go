@@ -63,7 +63,7 @@ func New[T any](w http.ResponseWriter, opts ...option[T]) *resp[T] {
 	return r
 }
 
-func (b *resp[T]) Send() error {
+func (b *resp[T]) Send() {
 	b.w.Header().Set("Content-Type", "application/json")
 	b.w.WriteHeader(b.status)
 	err := json.NewEncoder(b.w).Encode(map[string]any{
@@ -71,42 +71,44 @@ func (b *resp[T]) Send() error {
 		"msg":  b.msg,
 		"data": b.data,
 	})
-	return err
+	if err != nil {
+		http.Error(b.w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // ===== shortcuts =============================
 
 // Ok 成功响应
-func Ok[T any](w http.ResponseWriter, data T) error {
-	return New(w, WithData(data), WithMsg[T](SuccessMsg), WithCode[T](SuccessCode), WithStatus[T](200)).Send()
+func Ok[T any](w http.ResponseWriter, data T) {
+	New(w, WithData(data), WithMsg[T](SuccessMsg), WithCode[T](SuccessCode), WithStatus[T](200)).Send()
 }
 
 // Fail 失败响应
-func Fail[T any](w http.ResponseWriter, msg string, opts ...option[T]) error {
+func Fail[T any](w http.ResponseWriter, msg string, opts ...option[T]) {
 	opts = append([]option[T]{WithMsg[T](msg), WithCode[T](int(BusinessErrCode)), WithStatus[T](400)}, opts...)
-	return New(w, opts...).Send()
+	New(w, opts...).Send()
 }
 
 // Error 错误响应
-func Error[T any](w http.ResponseWriter, code int, err string, data T, opts ...option[T]) error {
+func Error[T any](w http.ResponseWriter, code int, err string, data T, opts ...option[T]) {
 	opts = append([]option[T]{WithMsg[T](err), WithCode[T](int(code)), WithStatus[T](500), WithData(data)}, opts...)
-	return New(w, opts...).Send()
+	New(w, opts...).Send()
 }
 
 // NotFound 404 响应
-func NotFound[T any](w http.ResponseWriter, msg string, opts ...option[T]) error {
+func NotFound[T any](w http.ResponseWriter, msg string, opts ...option[T]) {
 	opts = append([]option[T]{WithMsg[T](msg), WithCode[T](int(BusinessErrCode)), WithStatus[T](404)}, opts...)
-	return New(w, opts...).Send()
+	New(w, opts...).Send()
 }
 
 // Unauthorized 401 响应
-func Unauthorized[T any](w http.ResponseWriter, msg string, opts ...option[T]) error {
+func Unauthorized[T any](w http.ResponseWriter, msg string, opts ...option[T]) {
 	opts = append([]option[T]{WithMsg[T](msg), WithCode[T](int(BusinessErrCode)), WithStatus[T](401)}, opts...)
-	return New(w, opts...).Send()
+	New(w, opts...).Send()
 }
 
 // Forbidden 403 响应
-func Forbidden[T any](w http.ResponseWriter, msg string, opts ...option[T]) error {
+func Forbidden[T any](w http.ResponseWriter, msg string, opts ...option[T]) {
 	opts = append([]option[T]{WithMsg[T](msg), WithCode[T](int(BusinessErrCode)), WithStatus[T](403)}, opts...)
-	return New(w, opts...).Send()
+	New(w, opts...).Send()
 }
